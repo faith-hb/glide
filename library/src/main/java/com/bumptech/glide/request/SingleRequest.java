@@ -16,6 +16,7 @@ import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
 import com.bumptech.glide.request.transition.TransitionFactory;
 import com.bumptech.glide.util.LogTime;
+import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.Util;
 import com.bumptech.glide.util.pool.FactoryPools;
 import com.bumptech.glide.util.pool.StateVerifier;
@@ -84,7 +85,7 @@ public final class SingleRequest<R> implements Request,
   private GlideContext glideContext;
   private Object model;
   private Class<R> transcodeClass;
-  private BaseRequestOptions<?> requestOptions;
+  private RequestOptions requestOptions;
   private int overrideWidth;
   private int overrideHeight;
   private Priority priority;
@@ -106,7 +107,7 @@ public final class SingleRequest<R> implements Request,
       GlideContext glideContext,
       Object model,
       Class<R> transcodeClass,
-      BaseRequestOptions<?> requestOptions,
+      RequestOptions requestOptions,
       int overrideWidth,
       int overrideHeight,
       Priority priority,
@@ -136,7 +137,8 @@ public final class SingleRequest<R> implements Request,
     return request;
   }
 
-  private SingleRequest() {
+  @Synthetic
+  SingleRequest() {
     // just create, instances are reused with recycle/init
   }
 
@@ -144,7 +146,7 @@ public final class SingleRequest<R> implements Request,
       GlideContext glideContext,
       Object model,
       Class<R> transcodeClass,
-      BaseRequestOptions<?> requestOptions,
+      RequestOptions requestOptions,
       int overrideWidth,
       int overrideHeight,
       Priority priority,
@@ -236,6 +238,7 @@ public final class SingleRequest<R> implements Request,
    */
   void cancel() {
     stateVerifier.throwIfRecycled();
+    target.removeCallback(this);
     status = Status.CANCELLED;
     if (loadStatus != null) {
       loadStatus.cancel();
@@ -393,6 +396,7 @@ public final class SingleRequest<R> implements Request,
         requestOptions.getOptions(),
         requestOptions.isMemoryCacheable(),
         requestOptions.getUseUnlimitedSourceGeneratorsPool(),
+        requestOptions.getOnlyRetrieveFromCache(),
         this);
     if (Log.isLoggable(TAG, Log.VERBOSE)) {
       logV("finished onSizeReady in " + LogTime.getElapsedMillis(startTime));

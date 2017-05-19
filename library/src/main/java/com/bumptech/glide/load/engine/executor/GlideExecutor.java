@@ -4,6 +4,7 @@ import android.os.StrictMode;
 import android.os.StrictMode.ThreadPolicy;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import com.bumptech.glide.util.Synthetic;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.concurrent.BlockingQueue;
@@ -242,6 +243,10 @@ public final class GlideExecutor extends ThreadPoolExecutor {
    * http://goo.gl/8H670N.
    */
   public static int calculateBestThreadCount() {
+    // We override the current ThreadPolicy to allow disk reads.
+    // This shouldn't actually do disk-IO and accesses a device file.
+    // See: https://github.com/bumptech/glide/issues/1170
+    ThreadPolicy originalPolicy = StrictMode.allowThreadDiskReads();
     File[] cpus = null;
     try {
       File cpuInfo = new File(CPU_LOCATION);
@@ -256,6 +261,8 @@ public final class GlideExecutor extends ThreadPoolExecutor {
       if (Log.isLoggable(TAG, Log.ERROR)) {
         Log.e(TAG, "Failed to calculate accurate cpu count", t);
       }
+    } finally {
+      StrictMode.setThreadPolicy(originalPolicy);
     }
 
     int cpuCount = cpus != null ? cpus.length : 0;
@@ -310,8 +317,8 @@ public final class GlideExecutor extends ThreadPoolExecutor {
    */
   private static final class DefaultThreadFactory implements ThreadFactory {
     private final String name;
-    private final UncaughtThrowableStrategy uncaughtThrowableStrategy;
-    private final boolean preventNetworkOperations;
+    @Synthetic final UncaughtThrowableStrategy uncaughtThrowableStrategy;
+    @Synthetic final boolean preventNetworkOperations;
     private int threadNum;
 
     DefaultThreadFactory(String name, UncaughtThrowableStrategy uncaughtThrowableStrategy,

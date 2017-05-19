@@ -16,6 +16,7 @@ import com.bumptech.glide.load.engine.cache.MemoryCache;
 import com.bumptech.glide.load.engine.executor.GlideExecutor;
 import com.bumptech.glide.request.ResourceCallback;
 import com.bumptech.glide.util.LogTime;
+import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.Util;
 import com.bumptech.glide.util.pool.FactoryPools;
 import java.lang.ref.ReferenceQueue;
@@ -153,6 +154,7 @@ public class Engine implements EngineJobListener,
       Options options,
       boolean isMemoryCacheable,
       boolean useUnlimitedSourceExecutorPool,
+      boolean onlyRetrieveFromCache,
       ResourceCallback cb) {
     Util.assertMainThread();
     long startTime = LogTime.getLogTime();
@@ -202,6 +204,7 @@ public class Engine implements EngineJobListener,
         diskCacheStrategy,
         transformations,
         isTransformationRequired,
+        onlyRetrieveFromCache,
         options,
         engineJob);
     jobs.put(key, engineJob);
@@ -356,7 +359,7 @@ public class Engine implements EngineJobListener,
   }
 
   private static class ResourceWeakReference extends WeakReference<EngineResource<?>> {
-    private final Key key;
+    @Synthetic final Key key;
 
     public ResourceWeakReference(Key key, EngineResource<?> r,
         ReferenceQueue<? super EngineResource<?>> q) {
@@ -390,8 +393,8 @@ public class Engine implements EngineJobListener,
 
   // Visible for testing.
   static class DecodeJobFactory {
-    private final DecodeJob.DiskCacheProvider diskCacheProvider;
-    private final Pools.Pool<DecodeJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
+    @Synthetic final DecodeJob.DiskCacheProvider diskCacheProvider;
+    @Synthetic final Pools.Pool<DecodeJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
         new FactoryPools.Factory<DecodeJob<?>>() {
           @Override
           public DecodeJob<?> create() {
@@ -417,6 +420,7 @@ public class Engine implements EngineJobListener,
         DiskCacheStrategy diskCacheStrategy,
         Map<Class<?>, Transformation<?>> transformations,
         boolean isTransformationRequired,
+        boolean onlyRetrieveFromCache,
         Options options,
         DecodeJob.Callback<R> callback) {
       DecodeJob<R> result = (DecodeJob<R>) pool.acquire();
@@ -433,6 +437,7 @@ public class Engine implements EngineJobListener,
           diskCacheStrategy,
           transformations,
           isTransformationRequired,
+          onlyRetrieveFromCache,
           options,
           callback,
           creationOrder++);
@@ -441,11 +446,11 @@ public class Engine implements EngineJobListener,
 
   // Visible for testing.
   static class EngineJobFactory {
-    private final GlideExecutor diskCacheExecutor;
-    private final GlideExecutor sourceExecutor;
-    private final GlideExecutor sourceUnlimitedExecutor;
-    private final EngineJobListener listener;
-    private final Pools.Pool<EngineJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
+    @Synthetic final GlideExecutor diskCacheExecutor;
+    @Synthetic final GlideExecutor sourceExecutor;
+    @Synthetic final GlideExecutor sourceUnlimitedExecutor;
+    @Synthetic final EngineJobListener listener;
+    @Synthetic final Pools.Pool<EngineJob<?>> pool = FactoryPools.simple(JOB_POOL_SIZE,
         new FactoryPools.Factory<EngineJob<?>>() {
           @Override
           public EngineJob<?> create() {

@@ -22,12 +22,12 @@ import com.bumptech.glide.manager.LifecycleListener;
 import com.bumptech.glide.manager.RequestManagerTreeNode;
 import com.bumptech.glide.manager.RequestTracker;
 import com.bumptech.glide.manager.TargetTracker;
-import com.bumptech.glide.request.BaseRequestOptions;
 import com.bumptech.glide.request.Request;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.target.ViewTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.Util;
 import java.io.File;
 
@@ -50,8 +50,8 @@ public class RequestManager implements LifecycleListener {
       diskCacheStrategyOf(DiskCacheStrategy.DATA).priority(Priority.LOW)
           .skipMemoryCache(true);
 
-  private final Glide glide;
-  private final Lifecycle lifecycle;
+  protected final Glide glide;
+  @Synthetic final Lifecycle lifecycle;
   private final RequestTracker requestTracker;
   private final RequestManagerTreeNode treeNode;
   private final TargetTracker targetTracker = new TargetTracker();
@@ -65,14 +65,14 @@ public class RequestManager implements LifecycleListener {
   private final ConnectivityMonitor connectivityMonitor;
 
   @NonNull
-  private BaseRequestOptions<?> defaultRequestOptions;
-  @NonNull
-  private BaseRequestOptions<?> requestOptions;
+  private RequestOptions requestOptions;
 
   public RequestManager(Glide glide, Lifecycle lifecycle, RequestManagerTreeNode treeNode) {
     this(glide, lifecycle, treeNode, new RequestTracker(), glide.getConnectivityMonitorFactory());
   }
 
+  // Our usage is safe here.
+  @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
   RequestManager(
       Glide glide,
       Lifecycle lifecycle,
@@ -85,7 +85,6 @@ public class RequestManager implements LifecycleListener {
     this.requestTracker = requestTracker;
 
     final Context context = glide.getGlideContext().getBaseContext();
-
 
     connectivityMonitor =
         factory.build(context, new RequestManagerConnectivityListener(requestTracker));
@@ -101,10 +100,17 @@ public class RequestManager implements LifecycleListener {
     }
     lifecycle.addListener(connectivityMonitor);
 
-    defaultRequestOptions = glide.getGlideContext().getDefaultRequestOptions();
-    requestOptions = defaultRequestOptions;
+    setRequestOptions(glide.getGlideContext().getDefaultRequestOptions());
 
     glide.registerRequestManager(this);
+  }
+
+  protected void setRequestOptions(@NonNull RequestOptions toSet) {
+    this.requestOptions = toSet.clone().autoClone();
+  }
+
+  private void updateRequestOptions(RequestOptions toUpdate) {
+    this.requestOptions.apply(toUpdate);
   }
 
   /**
@@ -121,14 +127,12 @@ public class RequestManager implements LifecycleListener {
    *
    * <p>The modified options will only be applied to loads started after this method is called.
    *
-   * @see RequestBuilder#apply(BaseRequestOptions)
+   * @see RequestBuilder#apply(RequestOptions)
    *
    * @return This request manager.
    */
   public RequestManager applyDefaultRequestOptions(RequestOptions requestOptions) {
-    BaseRequestOptions<?> toMutate = this.requestOptions == defaultRequestOptions
-        ? this.requestOptions.clone() : this.defaultRequestOptions;
-    this.requestOptions = toMutate.apply(requestOptions);
+    updateRequestOptions(requestOptions);
     return this;
   }
 
@@ -150,8 +154,7 @@ public class RequestManager implements LifecycleListener {
    * @return This request manager.
    */
   public RequestManager setDefaultRequestOptions(RequestOptions requestOptions) {
-    this.defaultRequestOptions = requestOptions;
-    this.requestOptions = requestOptions;
+    setRequestOptions(requestOptions);
     return this;
   }
 
@@ -375,7 +378,7 @@ public class RequestManager implements LifecycleListener {
    * @return A new request builder for loading the given resource class.
    */
   public <ResourceType> RequestBuilder<ResourceType> as(Class<ResourceType> resourceClass) {
-    return new RequestBuilder<>(glide.getGlideContext(), this, resourceClass);
+    return new RequestBuilder<>(glide, this, resourceClass);
   }
 
   /**
@@ -445,7 +448,7 @@ public class RequestManager implements LifecycleListener {
     requestTracker.runRequest(request);
   }
 
-  BaseRequestOptions<?> getDefaultRequestOptions() {
+  RequestOptions getDefaultRequestOptions() {
     return requestOptions;
   }
 

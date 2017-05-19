@@ -4,6 +4,7 @@ import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 import android.util.Log;
 import com.bumptech.glide.util.Preconditions;
+import com.bumptech.glide.util.Synthetic;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -84,9 +85,7 @@ public final class LruArrayPool implements ArrayPool {
       }
     }
 
-    if (result != null) {
-      arrayAdapter.resetArray(result);
-    } else {
+    if (result == null) {
       if (Log.isLoggable(arrayAdapter.getTag(), Log.VERBOSE)) {
         Log.v(arrayAdapter.getTag(), "Allocated " + size + " bytes");
       }
@@ -204,6 +203,9 @@ public final class LruArrayPool implements ArrayPool {
 
   private static final class KeyPool extends BaseKeyPool<Key> {
 
+    @Synthetic
+    KeyPool() { }
+
     Key get(int size, Class<?> arrayClass) {
       Key result = get();
       result.init(size, arrayClass);
@@ -218,7 +220,7 @@ public final class LruArrayPool implements ArrayPool {
 
   private static final class Key implements Poolable {
     private final KeyPool pool;
-    private int size;
+    @Synthetic int size;
     private Class<?> arrayClass;
 
     Key(KeyPool pool) {
